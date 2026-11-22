@@ -26,10 +26,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
       - name: Deploy frontend to S3
         run: |
-          aws s3 sync frontend/ s3://resumebucket0sayani2/ \
-            --delete
+          aws s3 sync frontend/ s3://resumebucket0sayani2/ --delete
 
       - name: Invalidate CloudFront cache
         run: |
