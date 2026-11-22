@@ -1,0 +1,49 @@
+
+name: Deploy Cloud Resume Challenge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync frontend/ s3://resumebucket0sayani2/ \
+            --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3D395JFYCWS2H \
+            --paths "/*"
+
+      - name: Deploy Lambda backend
+        run: |
+          cd backend
+          zip -j lambda.zip lambda_function.py
+          aws lambda update-function-code \
+            --function-name resume-visitor-counter \
+            --zip-file fileb://lambda.zip
+
+      - name: Deployment completed
+        run: echo "Frontend and backend deployed successfully!"
